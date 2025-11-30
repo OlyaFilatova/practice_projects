@@ -18,7 +18,7 @@
     - [ ] PostgreSQL
     - ...
 
-## Version 1
+## Version 0.1.1
 The user should be able to:
 - [x] Add, Update, and Delete tasks
 - [x] Mark a task as in progress or done

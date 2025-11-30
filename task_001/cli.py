@@ -1,5 +1,5 @@
 import argparse
-from .lib.cli_controller import (
+from .core.cli_controller import (
     list_tasks,
     add_task,
     change_task_status,
