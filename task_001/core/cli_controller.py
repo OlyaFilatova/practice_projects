@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from .tasks import Task, TaskManager, TaskNotFound, parse_task_status
+from .tasks import Task, TaskManager, TaskNotFound, TaskStatus, parse_task_status
 
 file_path = Path(
     Path(os.path.dirname(os.path.realpath(__file__))) / "../data/tasks_storage.json"
@@ -12,9 +12,21 @@ def _get_task_manager():
     return task_manager
 
 
+def _format_task_status(status: str) -> str:
+    match status:
+        case TaskStatus.done.value:
+            return "Done"
+        case TaskStatus.in_progress.value:
+            return "In progress"
+        case TaskStatus.planned.value:
+            return "Planned"
+        case _:
+            return "Unknown status"
+
+
 def _format_tasks_list(tasks_list: list[tuple[int, Task]]) -> str:
     return "\n".join(
-        [f"{idx} - {task.status} - {task.description}" for idx, task in tasks_list]
+        [f"{idx} - {_format_task_status(task.status)} - {task.description}" for idx, task in tasks_list]
     )
 
 

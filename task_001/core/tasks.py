@@ -12,6 +12,7 @@ from dataclasses import asdict, dataclass
 from enum import Enum
 import json
 from pathlib import Path
+import time
 
 
 class TaskNotFound(Exception):
@@ -23,9 +24,9 @@ class JSONStorageCorrupted(Exception):
 
 
 class TaskStatus(str, Enum):
-    done = "Done"
-    in_progress = "In progress"
-    planned = "Planned"
+    done = "done"
+    in_progress = "in-progress"
+    planned = "todo"
 
 
 task_statuses = {
@@ -49,6 +50,8 @@ def parse_task_status(key: str | None) -> TaskStatus | None:
 class Task:
     description: str
     status: TaskStatus
+    createdAt: float
+    updatedAt: float
 
 
 class TaskManager:
@@ -66,7 +69,14 @@ class TaskManager:
         ]
 
     def create_task(self, description: str) -> tuple[int, Task]:
-        self.tasks.append(Task(description, TaskStatus.planned))
+        self.tasks.append(
+            Task(
+                description=description,
+                status=TaskStatus.planned,
+                createdAt=time.time(),
+                updatedAt=time.time(),
+            )
+        )
 
         self.store()
 
@@ -76,7 +86,12 @@ class TaskManager:
         try:
             with open(self.file_path, "r", encoding="utf-8") as f:
                 self.tasks = [
-                    Task(task["description"], task["status"])
+                    Task(
+                        description=task["description"],
+                        status=task["status"],
+                        createdAt=task["createdAt"],
+                        updatedAt=task["updatedAt"],
+                    )
                     for task in (json.load(f) or [])
                 ]
         except FileNotFoundError as exc:
@@ -98,6 +113,7 @@ class TaskManager:
             raise TaskNotFound(f"Task with index {task_idx} was not found.")
 
         self.tasks[task_idx].status = status
+        self.tasks[task_idx].updatedAt = time.time()
 
         self.store()
 
@@ -106,6 +122,7 @@ class TaskManager:
             raise TaskNotFound(f"Task with index {task_idx} was not found.")
 
         self.tasks[task_idx].description = description
+        self.tasks[task_idx].updatedAt = time.time()
 
         self.store()
 

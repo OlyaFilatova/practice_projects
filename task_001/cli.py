@@ -35,7 +35,7 @@ status_subparser.set_defaults(status="todo")
 status_subparser.set_defaults(func=change_task_status)
 
 status_subparser = subparsers.add_parser("mark-in-progress", help="Change task status.")
-status_subparser.add_argument("in-progress")
+status_subparser.add_argument("index")
 status_subparser.set_defaults(status="in-progress")
 status_subparser.set_defaults(func=change_task_status)
 

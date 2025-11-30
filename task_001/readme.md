@@ -7,8 +7,7 @@
 - [ ] Add subtasks.
 - [ ] Add "archived" status of a task. "archived" tasks will not be shown in the default "list" command.
     - [ ] Add "list archived" command.
-- [ ] Add creation timestamp.
-    - [ ] Show user if a task is stale.
+- [ ] Show user if a task is stale.
 - [ ] Add deadline timestamp.
 - [ ] Add status change history.
 - [ ] Add task priority.
@@ -17,8 +16,10 @@
     - [ ] SQLite
     - [ ] PostgreSQL
     - ...
+- [ ] Add UI adapters (cli, PyQT, REST API)
+- [ ] Integrate LLM to add ability to request suggestions for the task execution.
 
-## Version 0.1.1
+## Version 0.1.2
 The user should be able to:
 - [x] Add, Update, and Delete tasks
 - [x] Mark a task as in progress or done
