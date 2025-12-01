@@ -2,27 +2,34 @@
 
 ## Ideas for future versions
 - [ ] Add tests. Further continue through TDD.
-- [ ] Make storage file name configurable. By default store at data/uncategorized.json
-    - [ ] Make categories of tasks using different files and subfolders.
+- [ ] Add UI adapters (PyQT, REST API, WebSockets, etc.)
 - [ ] Add subtasks.
+- [ ] Add task priority.
+- [ ] Make categories of tasks using different files and subfolders.
 - [ ] Add "archived" status of a task. "archived" tasks will not be shown in the default "list" command.
     - [ ] Add "list archived" command.
 - [ ] Show user if a task is stale.
 - [ ] Add deadline timestamp.
 - [ ] Add status change history.
-- [ ] Add task priority.
 - [ ] Add adapters for different storage types. (Use docker where a local DB setup is needed)
     - [ ] CSV
     - [ ] SQLite
     - [ ] PostgreSQL
     - ...
-- [ ] Add UI adapters (cli, PyQT, REST API)
 - [ ] Integrate LLM to add ability to request suggestions for the task execution.
 
+## Version 0.3.0
+- [x] Support asynchronous logic
+- [x] Make storage file name configurable. By default store at data/uncategorized.json
+    
 ## Version 0.2.0
 - [x] Restructure code to make storage type configurable.
+    - [x] Add storage adapter for json
+    - [x] Add storage adapter for in-memory
 - [x] Restructure code to make output type configurable.
+    - [x] Add UI adapter for cli
 - [x] Restructure code to make input type configurable.
+    - [x] Add UI adapter for cli
 
 ## Version 0.1.2
 The user should be able to:

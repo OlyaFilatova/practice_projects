@@ -10,6 +10,7 @@ JSON file structure:
 ]
 """
 
+import asyncio
 from dataclasses import asdict
 import json
 import os
@@ -31,13 +32,15 @@ class JSONStorage(IStorage):
 
         self.cache = cache
 
-    def _dump(self):
-        self.store(self.cache.load())
+    async def _dump(self):
+        load_task = asyncio.create_task(self.cache.load())
+        store_task = asyncio.create_task(self.store(await load_task))
+        await store_task
 
-    def load(self) -> list[Task]:
+    async def load(self) -> list[Task]:
         try:
             with open(self.file_path, "r", encoding="utf-8") as f:
-                return self.cache.load(
+                load_task = asyncio.create_task(self.cache.load(
                     [
                         Task(
                             description=task["description"],
@@ -47,36 +50,47 @@ class JSONStorage(IStorage):
                         )
                         for task in (json.load(f) or [])
                     ]
-                )
+                ))
+                return await load_task
         except FileNotFoundError as exc:
             if not self.failed_to_load:
                 self.failed_to_load = True
                 self.file_path.parent.mkdir(parents=True, exist_ok=True)
                 with open(self.file_path, "w", encoding="utf-8") as f:
                     json.dump([], f)
-                return self.load()
+                return await self.load()
             else:
                 raise exc
 
-    def store(self, tasks: list[Task]):
+    async def store(self, tasks: list[Task]):
         with open(self.file_path, "w", encoding="utf-8") as f:
             json.dump([asdict(task) for task in tasks], f, indent=2)
 
-    def get_by_idx(self, idx: int) -> Task:
-        self.load()
-        return self.cache.get_by_idx(idx)
+    async def get_by_idx(self, idx: int) -> Task:
+        load_task = asyncio.create_task(self.load())
+        await load_task
+        get_task = asyncio.create_task(self.cache.get_by_idx(idx))
+        return await get_task
 
-    def update_by_idx(self, idx: int, task: Task) -> None:
-        self.cache.update_by_idx(idx, task)
-        self._dump()
+    async def update_by_idx(self, idx: int, task: Task) -> None:
+        update_task = asyncio.create_task(self.cache.update_by_idx(idx, task))
+        await update_task
+        dump_task = asyncio.create_task(self._dump())
+        await dump_task
 
-    def delete_by_idx(self, idx: int) -> None:
-        self.load()
-        self.cache.delete_by_idx(idx)
-        self._dump()
+    async def delete_by_idx(self, idx: int) -> None:
+        load_task = asyncio.create_task(self.load())
+        await load_task
+        delete_task = asyncio.create_task(self.cache.delete_by_idx(idx))
+        await delete_task
+        store_task = asyncio.create_task(self._dump())
+        await store_task
 
-    def add(self, task: Task) -> tuple[int, Task]:
-        self.load()
-        res = self.cache.add(task)
-        self._dump()
+    async def add(self, task: Task) -> tuple[int, Task]:
+        load_task = asyncio.create_task(self.load())
+        await load_task
+        add_task = asyncio.create_task(self.cache.add(task))
+        res = await add_task
+        store_task = asyncio.create_task(self._dump())
+        await store_task
         return res

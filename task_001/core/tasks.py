@@ -1,4 +1,5 @@
 import time
+import asyncio
 
 from ..input.cli import CLIInput
 from ..input.iinput import IInput
@@ -29,88 +30,113 @@ class TaskManager:
         self.input_manager.set_update_handler(self.update_task)
         self.input_manager.set_delete_handler(self.delete_task)
 
-    def list_tasks(self, status: TaskStatus | None = None) -> None:
+    async def list_tasks(self, status: TaskStatus | None = None) -> None:
+        storage_task = asyncio.create_task(self.storage_manager.load())
+        tasks = await storage_task
         tasks_list = [
             task
-            for task in enumerate(self.storage_manager.load())
+            for task in enumerate(tasks)
             if not status or task[1].status == status
         ]
-        self.output_manager.tasks_list(tasks_list)
 
-    def create_task(self, description: str):
-        idx, _ = self.storage_manager.add(
+        output_task = asyncio.create_task(self.output_manager.tasks_list(tasks_list))
+        await output_task
+
+    async def create_task(self, description: str):
+        storage_task = asyncio.create_task(self.storage_manager.add(
             Task(
                 description=description,
                 status=TaskStatus.planned,
                 createdAt=time.time(),
                 updatedAt=time.time(),
             )
-        )
+        ))
+        idx, _ = await storage_task
 
-        self.output_manager.task_added_success(idx)
+        output_task = asyncio.create_task(self.output_manager.task_added_success(idx))
+        await output_task
 
-    def change_status(self, idx: int, status: TaskStatus) -> None:
+    async def change_status(self, idx: int, status: TaskStatus) -> None:
         try:
-            task = self.storage_manager.get_by_idx(idx)
+            storage_task = asyncio.create_task(self.storage_manager.get_by_idx(idx))
+            task = await storage_task
         except TaskNotFound:
-            self.output_manager.error_task_not_found(idx)
+            output_task = asyncio.create_task(self.output_manager.error_task_not_found(idx))
+            await output_task
         else:
-            self.output_manager.task_status_updated_success(idx)
+            output_task = asyncio.create_task(self.output_manager.task_status_updated_success(idx))
+            await output_task
 
             task.status = status
             task.updatedAt = time.time()
 
-            self.storage_manager.update_by_idx(idx, task)
+            storage_task = asyncio.create_task(self.storage_manager.update_by_idx(idx, task))
+            await storage_task
 
-    def update_task(self, idx: int, description: str) -> None:
+    async def update_task(self, idx: int, description: str) -> None:
         try:
-            task = self.storage_manager.get_by_idx(idx)
+            storage_task = asyncio.create_task(self.storage_manager.get_by_idx(idx))
+            task = await storage_task
         except TaskNotFound:
-            self.output_manager.error_task_not_found(idx)
+            output_task = asyncio.create_task(self.output_manager.error_task_not_found(idx))
+            await output_task
         else:
             task.description = description
             task.updatedAt = time.time()
 
-            self.storage_manager.update_by_idx(idx, task)
-            self.output_manager.task_updated_success(idx)
+            storage_task = asyncio.create_task(self.storage_manager.update_by_idx(idx, task))
+            await storage_task
+            output_task = asyncio.create_task(self.output_manager.task_updated_success(idx))
+            await output_task
 
-    def delete_task(self, idx: int) -> None:
+    async def delete_task(self, idx: int) -> None:
         try:
-            self.storage_manager.delete_by_idx(idx)
+            storage_task = asyncio.create_task(self.storage_manager.delete_by_idx(idx))
+            await storage_task
         except TaskNotFound:
-            self.output_manager.error_task_not_found(idx)
+            output_task = asyncio.create_task(self.output_manager.error_task_not_found(idx))
+            await output_task
         else:
-            self.output_manager.task_deleted_success(idx)
+            output_task = asyncio.create_task(self.output_manager.task_deleted_success(idx))
+            await output_task
 
 
 if __name__ == "__main__":
-    task_manager = TaskManager(
-        storage_manager=InMemoryStorage(),
-        output_manager=CLIOutput(),
-        input_manager=CLIInput(),
-    )
-    task_manager.list_tasks()
+    async def test():
+        task_manager = TaskManager(
+            storage_manager=InMemoryStorage(),
+            output_manager=CLIOutput(),
+            input_manager=CLIInput(),
+        )
+        test_tasks = [
+            task_manager.list_tasks(),
 
-    task_manager.create_task("First ever task")
-    task_manager.create_task("Second ever task")
-    task_manager.create_task("Thirs ever task")
+            task_manager.create_task("First ever task"),
+            task_manager.create_task("Second ever task"),
+            task_manager.create_task("Thirs ever task"),
 
-    task_manager.list_tasks()
+            task_manager.list_tasks(),
 
-    task_manager.change_status(0, TaskStatus.in_progress)
-    task_manager.change_status(2, TaskStatus.done)
+            task_manager.change_status(0, TaskStatus.in_progress),
+            task_manager.change_status(2, TaskStatus.done),
 
-    task_manager.list_tasks()
-    task_manager.list_tasks(TaskStatus.planned)
-    task_manager.list_tasks(TaskStatus.in_progress)
-    task_manager.list_tasks(TaskStatus.done)
+            task_manager.list_tasks(),
+            task_manager.list_tasks(TaskStatus.planned),
+            task_manager.list_tasks(TaskStatus.in_progress),
+            task_manager.list_tasks(TaskStatus.done),
 
-    task_manager.update_task(1, "Stop procrastination: Second ever task")
-    task_manager.list_tasks()
+            task_manager.update_task(1, "Stop procrastination: Second ever task"),
+            task_manager.list_tasks(),
 
-    task_manager.delete_task(2)
-    task_manager.list_tasks()
-    task_manager.delete_task(1)
-    task_manager.list_tasks()
-    task_manager.delete_task(0)
-    task_manager.list_tasks()
+            task_manager.delete_task(2),
+            task_manager.list_tasks(),
+            task_manager.delete_task(1),
+            task_manager.list_tasks(),
+            task_manager.delete_task(0),
+            task_manager.list_tasks()
+        ]
+
+        for task in test_tasks:
+            await task
+
+    asyncio.run(test())

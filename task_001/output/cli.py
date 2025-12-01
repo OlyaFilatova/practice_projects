@@ -1,3 +1,4 @@
+import asyncio
 from .ioutput import IOutput
 from ..models.task import TaskStatus, Task
 
@@ -14,7 +15,7 @@ class CLIOutput(IOutput):
             case _:
                 return "Unknown status"
 
-    def tasks_list(self, tasks_list: list[tuple[int, Task]]):
+    async def tasks_list(self, tasks_list: list[tuple[int, Task]]):
         print(
             "\n".join(
                 [
@@ -24,29 +25,33 @@ class CLIOutput(IOutput):
             )
         )
 
-    def task_added_success(self, id: int):
+    async def task_added_success(self, id: int):
         print(f"Task added successfully (ID: {id})")
 
-    def task_updated_success(self, id: int):
+    async def task_updated_success(self, id: int):
         print(f"Task updated successfully (ID: {id})")
 
-    def task_status_updated_success(self, id: int):
+    async def task_status_updated_success(self, id: int):
         print(f"Task status updated successfully (ID: {id})")
 
-    def task_deleted_success(self, id: int):
+    async def task_deleted_success(self, id: int):
         print(f"Task deleted successfully (ID: {id})")
 
-    def error(self, text: str):
+    async def error(self, text: str):
         print(f"Error: {text}")
 
-    def error_task_status_not_found(self, key: str):
-        self.error(f"Task status index '{key}' not found.")
+    async def error_task_status_not_found(self, key: str):
+        output_task = asyncio.create_task(self.error(f"Task status index '{key}' not found."))
+        await output_task
 
-    def error_index_type(self, index: str):
-        self.error(f'Index must be an integer. Received "{index}" instead.')
+    async def error_index_type(self, index: str):
+        output_task = asyncio.create_task(self.error(f'Index must be an integer. Received "{index}" instead.'))
+        await output_task
 
-    def error_storage_type(self, storage_type: str):
-        self.error(f"Unknown storage type {storage_type}")
+    async def error_storage_type(self, storage_type: str):
+        output_task = asyncio.create_task(self.error(f"Unknown storage type {storage_type}"))
+        await output_task
 
-    def error_task_not_found(self, index: int):
-        self.error(f'Task "{index}" not found.')
+    async def error_task_not_found(self, index: int):
+        output_task = asyncio.create_task(self.error(f'Task "{index}" not found.'))
+        await output_task

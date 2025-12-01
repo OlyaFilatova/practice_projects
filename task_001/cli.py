@@ -1,3 +1,4 @@
+import asyncio
 from enum import Enum
 import configparser
 import os
@@ -15,7 +16,6 @@ from .core.tasks import TaskManager
 
 
 config = configparser.ConfigParser()
-config.read(Path(os.path.dirname(os.path.realpath(__file__))) / "config.ini")
 
 
 class StorageType(Enum):
@@ -62,27 +62,34 @@ def _get_storage_manager() -> IStorage | None:
         case StorageType.in_memory.value:
             return InMemoryStorage()
 
+async def main():
+    config.read(Path(os.path.dirname(os.path.realpath(__file__))) / "config.ini")
 
-output_manager = _get_output_manager()
-input_manager = _get_input_manager()
-storage_manager = _get_storage_manager()
+    output_manager = _get_output_manager()
+    input_manager = _get_input_manager()
+    storage_manager = _get_storage_manager()
 
-if not output_manager:
-    print("Failed to load output manager. Closing application")
-    exit()
+    if not output_manager:
+        print("Failed to load output manager. Closing application")
+        exit()
 
-if not input_manager:
-    output_manager.error("Failed to load input manager. Closing application")
-    exit()
+    if not input_manager:
+        output_task = asyncio.create_task(output_manager.error("Failed to load input manager. Closing application"))
+        await output_task
+        exit()
 
-if not storage_manager:
-    output_manager.error("Failed to load storage manager. Closing application")
-    exit()
+    if not storage_manager:
+        output_task = asyncio.create_task(output_manager.error("Failed to load storage manager. Closing application"))
+        await output_task
+        exit()
 
-TaskManager(
-    storage_manager=storage_manager,
-    input_manager=input_manager,
-    output_manager=output_manager,
-)
+    TaskManager(
+        storage_manager=storage_manager,
+        input_manager=input_manager,
+        output_manager=output_manager,
+    )
 
-input_manager.start()
+    start_task = asyncio.create_task(input_manager.start())
+    await start_task
+
+asyncio.run(main())

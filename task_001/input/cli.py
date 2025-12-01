@@ -1,5 +1,7 @@
 import argparse
-from typing import Callable
+import asyncio
+from types import CoroutineType
+from typing import Any, Callable
 
 from .iinput import IInput
 
@@ -26,14 +28,15 @@ class CLIInput(IInput):
 
         return task_statuses[key]
 
-    def _parse_index(self, index: str) -> int | None:
+    async def _parse_index(self, index: str) -> int | None:
         try:
             return int(index)
         except ValueError:
-            self.__error_handler(f"Failed to parse index {index}")
+            output_task = asyncio.create_task(self.__error_handler(f"Failed to parse index {index}"))
+            await output_task
             return
 
-    def set_add_handler(self, callback: Callable[[str], None]) -> None:
+    def set_add_handler(self, callback: Callable[[str], CoroutineType[Any, Any, None]]) -> None:
         self.__add_handler = callback
 
     def __setup_add_command(self) -> None:
@@ -43,7 +46,7 @@ class CLIInput(IInput):
             func=lambda description, **kwargs: self.__add_handler(description)
         )
 
-    def set_list_handler(self, callback: Callable[[TaskStatus | None], None]) -> None:
+    def set_list_handler(self, callback: Callable[[TaskStatus | None], CoroutineType[Any, Any, None]]) -> None:
         self.__list_handler = callback
 
     def __setup_list_command(self) -> None:
@@ -53,12 +56,13 @@ class CLIInput(IInput):
         )
         subparser.set_defaults(func=lambda status, **kwargs: self._list_tasks(status))
 
-    def _list_tasks(self, status: str | None = None):
+    async def _list_tasks(self, status: str | None = None):
         parsed_status = self._parse_task_status(status)
 
-        self.__list_handler(parsed_status)
+        handler_task = asyncio.create_task(self.__list_handler(parsed_status))
+        await handler_task
 
-    def set_update_handler(self, callback: Callable[[int, str], None]) -> None:
+    def set_update_handler(self, callback: Callable[[int, str], CoroutineType[Any, Any, None]]) -> None:
         self.__update_handler = callback
 
     def __setup_update_command(self) -> None:
@@ -71,13 +75,15 @@ class CLIInput(IInput):
             )
         )
 
-    def _update_task(self, index: str, description: str):
-        idx = self._parse_index(index)
+    async def _update_task(self, index: str, description: str):
+        parse_task = asyncio.create_task(self._parse_index(index))
+        idx = await parse_task
 
         if idx != None:
-            self.__update_handler(idx, description)
+            handler_task = asyncio.create_task(self.__update_handler(idx, description))
+            await handler_task
 
-    def set_status_handler(self, callback: Callable[[int, TaskStatus], None]) -> None:
+    def set_status_handler(self, callback: Callable[[int, TaskStatus], CoroutineType[Any, Any, None]]) -> None:
         self.__status_handler = callback
 
     def __setup_mark_todo_command(self) -> None:
@@ -89,11 +95,13 @@ class CLIInput(IInput):
             )
         )
 
-    def _change_task_status(self, index: str, status: TaskStatus):
-        idx = self._parse_index(index)
+    async def _change_task_status(self, index: str, status: TaskStatus):
+        parse_task = asyncio.create_task(self._parse_index(index))
+        idx = await parse_task
 
         if idx != None:
-            self.__status_handler(idx, status)
+            handler_task = asyncio.create_task(self.__status_handler(idx, status))
+            await handler_task
 
     def __setup_mark_in_progress_command(self) -> None:
         subparser = self.subparsers.add_parser(
@@ -115,7 +123,7 @@ class CLIInput(IInput):
             )
         )
 
-    def set_delete_handler(self, callback: Callable[[int], None]) -> None:
+    def set_delete_handler(self, callback: Callable[[int], CoroutineType[Any, Any, None]]) -> None:
         self.__delete_handler = callback
 
     def __setup_delete_command(self) -> None:
@@ -123,13 +131,15 @@ class CLIInput(IInput):
         subparser.add_argument("index")
         subparser.set_defaults(func=lambda index, **kwargs: self._delete_task(index))
 
-    def _delete_task(self, index: str, **kwargs):
-        idx = self._parse_index(index)
+    async def _delete_task(self, index: str, **kwargs):
+        parse_task = asyncio.create_task(self._parse_index(index))
+        idx = await parse_task
 
         if idx != None:
-            self.__delete_handler(idx)
+            handler_task = asyncio.create_task(self.__delete_handler(idx))
+            await handler_task
 
-    def set_error_handler(self, callback: Callable[[str], None]) -> None:
+    def set_error_handler(self, callback: Callable[[str], CoroutineType[Any, Any, None]]) -> None:
         self.__error_handler = callback
 
     def _setup_program(self) -> None:
@@ -148,9 +158,9 @@ class CLIInput(IInput):
         self.__setup_mark_todo_command()
         self.__setup_update_command()
 
-    def start(self):
+    async def start(self):
         args = self.parser.parse_args()
         if "func" in args:
-            args.func(**args.__dict__)
+            await args.func(**args.__dict__)
         else:
             self.parser.print_help()
