@@ -32,11 +32,15 @@ class CLIInput(IInput):
         try:
             return int(index)
         except ValueError:
-            output_task = asyncio.create_task(self.__error_handler(f"Failed to parse index {index}"))
+            output_task = asyncio.create_task(
+                self.__error_handler(f"Failed to parse index {index}")
+            )
             await output_task
             return
 
-    def set_add_handler(self, callback: Callable[[str], CoroutineType[Any, Any, None]]) -> None:
+    def set_add_handler(
+        self, callback: Callable[[str], CoroutineType[Any, Any, None]]
+    ) -> None:
         self.__add_handler = callback
 
     def __setup_add_command(self) -> None:
@@ -46,7 +50,9 @@ class CLIInput(IInput):
             func=lambda description, **kwargs: self.__add_handler(description)
         )
 
-    def set_list_handler(self, callback: Callable[[TaskStatus | None], CoroutineType[Any, Any, None]]) -> None:
+    def set_list_handler(
+        self, callback: Callable[[TaskStatus | None], CoroutineType[Any, Any, None]]
+    ) -> None:
         self.__list_handler = callback
 
     def __setup_list_command(self) -> None:
@@ -62,7 +68,9 @@ class CLIInput(IInput):
         handler_task = asyncio.create_task(self.__list_handler(parsed_status))
         await handler_task
 
-    def set_update_handler(self, callback: Callable[[int, str], CoroutineType[Any, Any, None]]) -> None:
+    def set_update_handler(
+        self, callback: Callable[[int, str], CoroutineType[Any, Any, None]]
+    ) -> None:
         self.__update_handler = callback
 
     def __setup_update_command(self) -> None:
@@ -83,7 +91,9 @@ class CLIInput(IInput):
             handler_task = asyncio.create_task(self.__update_handler(idx, description))
             await handler_task
 
-    def set_status_handler(self, callback: Callable[[int, TaskStatus], CoroutineType[Any, Any, None]]) -> None:
+    def set_status_handler(
+        self, callback: Callable[[int, TaskStatus], CoroutineType[Any, Any, None]]
+    ) -> None:
         self.__status_handler = callback
 
     def __setup_mark_todo_command(self) -> None:
@@ -123,7 +133,9 @@ class CLIInput(IInput):
             )
         )
 
-    def set_delete_handler(self, callback: Callable[[int], CoroutineType[Any, Any, None]]) -> None:
+    def set_delete_handler(
+        self, callback: Callable[[int], CoroutineType[Any, Any, None]]
+    ) -> None:
         self.__delete_handler = callback
 
     def __setup_delete_command(self) -> None:
@@ -139,7 +151,9 @@ class CLIInput(IInput):
             handler_task = asyncio.create_task(self.__delete_handler(idx))
             await handler_task
 
-    def set_error_handler(self, callback: Callable[[str], CoroutineType[Any, Any, None]]) -> None:
+    def set_error_handler(
+        self, callback: Callable[[str], CoroutineType[Any, Any, None]]
+    ) -> None:
         self.__error_handler = callback
 
     def _setup_program(self) -> None:

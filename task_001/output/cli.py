@@ -41,15 +41,21 @@ class CLIOutput(IOutput):
         print(f"Error: {text}")
 
     async def error_task_status_not_found(self, key: str):
-        output_task = asyncio.create_task(self.error(f"Task status index '{key}' not found."))
+        output_task = asyncio.create_task(
+            self.error(f"Task status index '{key}' not found.")
+        )
         await output_task
 
     async def error_index_type(self, index: str):
-        output_task = asyncio.create_task(self.error(f'Index must be an integer. Received "{index}" instead.'))
+        output_task = asyncio.create_task(
+            self.error(f'Index must be an integer. Received "{index}" instead.')
+        )
         await output_task
 
     async def error_storage_type(self, storage_type: str):
-        output_task = asyncio.create_task(self.error(f"Unknown storage type {storage_type}"))
+        output_task = asyncio.create_task(
+            self.error(f"Unknown storage type {storage_type}")
+        )
         await output_task
 
     async def error_task_not_found(self, index: int):

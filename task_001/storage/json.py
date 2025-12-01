@@ -40,17 +40,19 @@ class JSONStorage(IStorage):
     async def load(self) -> list[Task]:
         try:
             with open(self.file_path, "r", encoding="utf-8") as f:
-                load_task = asyncio.create_task(self.cache.load(
-                    [
-                        Task(
-                            description=task["description"],
-                            status=task["status"],
-                            createdAt=task["createdAt"],
-                            updatedAt=task["updatedAt"],
-                        )
-                        for task in (json.load(f) or [])
-                    ]
-                ))
+                load_task = asyncio.create_task(
+                    self.cache.load(
+                        [
+                            Task(
+                                description=task["description"],
+                                status=task["status"],
+                                createdAt=task["createdAt"],
+                                updatedAt=task["updatedAt"],
+                            )
+                            for task in (json.load(f) or [])
+                        ]
+                    )
+                )
                 return await load_task
         except FileNotFoundError as exc:
             if not self.failed_to_load:

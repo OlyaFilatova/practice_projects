@@ -62,6 +62,7 @@ def _get_storage_manager() -> IStorage | None:
         case StorageType.in_memory.value:
             return InMemoryStorage()
 
+
 async def main():
     config.read(Path(os.path.dirname(os.path.realpath(__file__))) / "config.ini")
 
@@ -74,12 +75,16 @@ async def main():
         exit()
 
     if not input_manager:
-        output_task = asyncio.create_task(output_manager.error("Failed to load input manager. Closing application"))
+        output_task = asyncio.create_task(
+            output_manager.error("Failed to load input manager. Closing application")
+        )
         await output_task
         exit()
 
     if not storage_manager:
-        output_task = asyncio.create_task(output_manager.error("Failed to load storage manager. Closing application"))
+        output_task = asyncio.create_task(
+            output_manager.error("Failed to load storage manager. Closing application")
+        )
         await output_task
         exit()
 
@@ -91,5 +96,6 @@ async def main():
 
     start_task = asyncio.create_task(input_manager.start())
     await start_task
+
 
 asyncio.run(main())
