@@ -1,55 +1,88 @@
-import argparse
-from .core.cli_controller import (
-    list_tasks,
-    add_task,
-    change_task_status,
-    update_task,
-    delete_task,
+from enum import Enum
+import configparser
+import os
+from pathlib import Path
+
+from .input.iinput import IInput
+from .output.ioutput import IOutput
+from .storage.istorage import IStorage
+
+from .input.cli import CLIInput
+from .storage.json import JSONStorage
+from .storage.in_memory import InMemoryStorage
+from .output.cli import CLIOutput
+from .core.tasks import TaskManager
+
+
+config = configparser.ConfigParser()
+config.read(Path(os.path.dirname(os.path.realpath(__file__))) / "config.ini")
+
+
+class StorageType(Enum):
+    json = "json"
+    in_memory = "in-memory"
+
+
+class InputType(Enum):
+    cli = "cli"
+
+
+class OutputType(Enum):
+    cli = "cli"
+
+
+get_output_type = lambda: config["DEFAULT"]["output-type"]
+
+
+def _get_output_manager() -> IOutput | None:
+    output_type = get_output_type()
+    match output_type:
+        case OutputType.cli.value:
+            return CLIOutput()
+
+
+get_input_type = lambda: config["DEFAULT"]["input-type"]
+
+
+def _get_input_manager() -> IInput | None:
+    input_type = get_input_type()
+    match input_type:
+        case InputType.cli.value:
+            return CLIInput()
+
+
+get_storage_type = lambda: config["DEFAULT"]["storage-type"]
+
+
+def _get_storage_manager() -> IStorage | None:
+    storage_type = get_storage_type()
+    match storage_type:
+        case StorageType.json.value:
+            return JSONStorage(file_location=config["DEFAULT"]["file-location"])
+        case StorageType.in_memory.value:
+            return InMemoryStorage()
+
+
+output_manager = _get_output_manager()
+input_manager = _get_input_manager()
+storage_manager = _get_storage_manager()
+
+if not output_manager:
+    print("Failed to load output manager. Closing application")
+    exit()
+
+if not input_manager:
+    output_manager.error("Failed to load input manager. Closing application")
+    exit()
+
+if not storage_manager:
+    output_manager.error("Failed to load storage manager. Closing application")
+    exit()
+
+TaskManager(
+    storage_manager=storage_manager,
+    input_manager=input_manager,
+    output_manager=output_manager,
 )
 
-parser = argparse.ArgumentParser(
-    prog="Task manager.",
-    description="A simple TODO list.",
-)
-
-subparsers = parser.add_subparsers(help="Task actions.")
-
-list_subparser = subparsers.add_parser("list", help="List tasks.")
-list_subparser.add_argument(
-    "status", choices=["done", "todo", "in-progress"], nargs="?", default=None
-)
-list_subparser.set_defaults(func=list_tasks)
-
-create_subparser = subparsers.add_parser("add", help="Create task.")
-create_subparser.add_argument("description")
-create_subparser.set_defaults(func=add_task)
-
-update_subparser = subparsers.add_parser("update", help="Update task.")
-update_subparser.add_argument("index")
-update_subparser.add_argument("description")
-update_subparser.set_defaults(func=update_task)
-
-status_subparser = subparsers.add_parser("mark-todo", help="Change task status.")
-status_subparser.add_argument("index")
-status_subparser.set_defaults(status="todo")
-status_subparser.set_defaults(func=change_task_status)
-
-status_subparser = subparsers.add_parser("mark-in-progress", help="Change task status.")
-status_subparser.add_argument("index")
-status_subparser.set_defaults(status="in-progress")
-status_subparser.set_defaults(func=change_task_status)
-
-status_subparser = subparsers.add_parser("mark-done", help="Change task status.")
-status_subparser.add_argument("index")
-status_subparser.set_defaults(status="done")
-status_subparser.set_defaults(func=change_task_status)
-
-delete_subparser = subparsers.add_parser("delete", help="Delete task.")
-delete_subparser.add_argument("index")
-delete_subparser.set_defaults(func=delete_task)
-
-args = parser.parse_args()
-if "func" in args:
-    args.func(**args.__dict__)
-else:
-    parser.print_help()
+input_manager.start()

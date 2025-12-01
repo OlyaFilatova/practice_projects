@@ -19,6 +19,11 @@
 - [ ] Add UI adapters (cli, PyQT, REST API)
 - [ ] Integrate LLM to add ability to request suggestions for the task execution.
 
+## Version 0.2.0
+- [x] Restructure code to make storage type configurable.
+- [x] Restructure code to make output type configurable.
+- [x] Restructure code to make input type configurable.
+
 ## Version 0.1.2
 The user should be able to:
 - [x] Add, Update, and Delete tasks

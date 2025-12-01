@@ -1,75 +1,44 @@
-"""
-JSON file structure:
-
-[
-    task:
-        description: str
-        status: "Done" | "In progress" | "Planned"
-]
-"""
-
-from dataclasses import asdict, dataclass
-from enum import Enum
-import json
-from pathlib import Path
 import time
 
-
-class TaskNotFound(Exception):
-    """Task index out of bound."""
-
-
-class JSONStorageCorrupted(Exception):
-    """Not able to extract data from JSON storage."""
+from ..input.cli import CLIInput
+from ..input.iinput import IInput
 
 
-class TaskStatus(str, Enum):
-    done = "done"
-    in_progress = "in-progress"
-    planned = "todo"
-
-
-task_statuses = {
-    "done": TaskStatus.done,
-    "todo": TaskStatus.planned,
-    "in-progress": TaskStatus.in_progress,
-}
-
-
-def parse_task_status(key: str | None) -> TaskStatus | None:
-    if key == None:
-        return None
-
-    if key not in task_statuses:
-        raise ValueError(f"Task status index '{key}' not found.")
-
-    return task_statuses[key]
-
-
-@dataclass
-class Task:
-    description: str
-    status: TaskStatus
-    createdAt: float
-    updatedAt: float
+from ..models.task import TaskNotFound, TaskStatus, Task
+from ..output.cli import CLIOutput
+from ..output.ioutput import IOutput
+from ..storage.istorage import IStorage
+from ..storage.in_memory import InMemoryStorage
 
 
 class TaskManager:
-    def __init__(self, file_path: Path):
-        self.failed_to_load = False
-        self.file_path = file_path
+    def __init__(
+        self,
+        *,
+        storage_manager: IStorage,
+        output_manager: IOutput,
+        input_manager: IInput
+    ):
+        self.storage_manager = storage_manager
+        self.output_manager = output_manager
+        self.input_manager = input_manager
 
-        self.load()
+        self.input_manager.set_list_handler(self.list_tasks)
+        self.input_manager.set_add_handler(self.create_task)
+        self.input_manager.set_status_handler(self.change_status)
+        self.input_manager.set_update_handler(self.update_task)
+        self.input_manager.set_delete_handler(self.delete_task)
 
-    def list_tasks(self, status: TaskStatus | None = None) -> list[tuple[int, Task]]:
-        return [
+    def list_tasks(self, status: TaskStatus | None = None) -> None:
+        tasks_list = [
             task
-            for task in enumerate(self.tasks)
+            for task in enumerate(self.storage_manager.load())
             if not status or task[1].status == status
         ]
+        self.output_manager.tasks_list(tasks_list)
 
-    def create_task(self, description: str) -> tuple[int, Task]:
-        self.tasks.append(
+    def create_task(self, description: str):
+        idx, _ = self.storage_manager.add(
             Task(
                 description=description,
                 status=TaskStatus.planned,
@@ -78,88 +47,70 @@ class TaskManager:
             )
         )
 
-        self.store()
+        self.output_manager.task_added_success(idx)
 
-        return len(self.tasks), self.tasks[-1]
-
-    def load(self):
+    def change_status(self, idx: int, status: TaskStatus) -> None:
         try:
-            with open(self.file_path, "r", encoding="utf-8") as f:
-                self.tasks = [
-                    Task(
-                        description=task["description"],
-                        status=task["status"],
-                        createdAt=task["createdAt"],
-                        updatedAt=task["updatedAt"],
-                    )
-                    for task in (json.load(f) or [])
-                ]
-        except FileNotFoundError as exc:
-            if not self.failed_to_load:
-                self.failed_to_load = True
-                self.file_path.parent.mkdir(parents=True, exist_ok=True)
-                with open(self.file_path, "w", encoding="utf-8") as f:
-                    json.dump([], f)
-                self.load()
-            else:
-                raise exc
+            task = self.storage_manager.get_by_idx(idx)
+        except TaskNotFound:
+            self.output_manager.error_task_not_found(idx)
+        else:
+            self.output_manager.task_status_updated_success(idx)
 
-    def store(self):
-        with open(self.file_path, "w", encoding="utf-8") as f:
-            json.dump([asdict(task) for task in self.tasks], f, indent=2)
+            task.status = status
+            task.updatedAt = time.time()
 
-    def change_status(self, task_idx: int, status: TaskStatus) -> None:
-        if task_idx >= len(self.tasks):
-            raise TaskNotFound(f"Task with index {task_idx} was not found.")
+            self.storage_manager.update_by_idx(idx, task)
 
-        self.tasks[task_idx].status = status
-        self.tasks[task_idx].updatedAt = time.time()
+    def update_task(self, idx: int, description: str) -> None:
+        try:
+            task = self.storage_manager.get_by_idx(idx)
+        except TaskNotFound:
+            self.output_manager.error_task_not_found(idx)
+        else:
+            task.description = description
+            task.updatedAt = time.time()
 
-        self.store()
+            self.storage_manager.update_by_idx(idx, task)
+            self.output_manager.task_updated_success(idx)
 
-    def update_task(self, task_idx: int, description: str) -> None:
-        if task_idx >= len(self.tasks):
-            raise TaskNotFound(f"Task with index {task_idx} was not found.")
-
-        self.tasks[task_idx].description = description
-        self.tasks[task_idx].updatedAt = time.time()
-
-        self.store()
-
-    def delete_task(self, task_idx: int) -> None:
-        if task_idx >= len(self.tasks):
-            raise TaskNotFound(f"Task with index {task_idx} was not found.")
-
-        del self.tasks[task_idx]
-
-        self.store()
+    def delete_task(self, idx: int) -> None:
+        try:
+            self.storage_manager.delete_by_idx(idx)
+        except TaskNotFound:
+            self.output_manager.error_task_not_found(idx)
+        else:
+            self.output_manager.task_deleted_success(idx)
 
 
 if __name__ == "__main__":
-    file_path = Path("tasks_storage.json")
-    task_manager = TaskManager(file_path)
-    print(task_manager.list_tasks())
+    task_manager = TaskManager(
+        storage_manager=InMemoryStorage(),
+        output_manager=CLIOutput(),
+        input_manager=CLIInput(),
+    )
+    task_manager.list_tasks()
 
-    print(task_manager.create_task("First ever task"))
-    print(task_manager.create_task("Second ever task"))
-    print(task_manager.create_task("Thirs ever task"))
+    task_manager.create_task("First ever task")
+    task_manager.create_task("Second ever task")
+    task_manager.create_task("Thirs ever task")
 
-    print(task_manager.list_tasks())
+    task_manager.list_tasks()
 
-    print(task_manager.change_status(0, TaskStatus.in_progress))
-    print(task_manager.change_status(2, TaskStatus.done))
+    task_manager.change_status(0, TaskStatus.in_progress)
+    task_manager.change_status(2, TaskStatus.done)
 
-    print(task_manager.list_tasks())
-    print(task_manager.list_tasks(TaskStatus.planned))
-    print(task_manager.list_tasks(TaskStatus.in_progress))
-    print(task_manager.list_tasks(TaskStatus.done))
+    task_manager.list_tasks()
+    task_manager.list_tasks(TaskStatus.planned)
+    task_manager.list_tasks(TaskStatus.in_progress)
+    task_manager.list_tasks(TaskStatus.done)
 
-    print(task_manager.update_task(1, "Stop procrastination: Second ever task"))
-    print(task_manager.list_tasks())
+    task_manager.update_task(1, "Stop procrastination: Second ever task")
+    task_manager.list_tasks()
 
-    print(task_manager.delete_task(2))
-    print(task_manager.list_tasks())
-    print(task_manager.delete_task(1))
-    print(task_manager.list_tasks())
-    print(task_manager.delete_task(0))
-    print(task_manager.list_tasks())
+    task_manager.delete_task(2)
+    task_manager.list_tasks()
+    task_manager.delete_task(1)
+    task_manager.list_tasks()
+    task_manager.delete_task(0)
+    task_manager.list_tasks()
