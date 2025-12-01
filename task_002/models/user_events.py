@@ -86,13 +86,10 @@ class EventType(Enum):
     action: "started" """
 
 
-event_enum_values = {member.value for member in EventType}
-
-
 @dataclass
 class UserEvent:
-    type: EventType  # EventType # event.type
+    type: str  # event.type
     repo: str  # event.repo.name
-    action: str | None
-    ref_type: str | None
-    formatted_message: str
+    action: str | None  # event.payload.action
+    actions: list[str]  # event.payload.pages.action
+    ref_type: str | None  # event.payload.ref_type
