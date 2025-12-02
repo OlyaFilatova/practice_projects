@@ -19,7 +19,7 @@ class IInput(ABC):
     ) -> None: ...
 
     def set_status_handler(
-        self, callback: Callable[[int, TaskStatus], CoroutineType[Any, Any, None]]
+        self, callback: Callable[[int, str], CoroutineType[Any, Any, None]]
     ) -> None: ...
 
     def set_delete_handler(

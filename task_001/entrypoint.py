@@ -4,6 +4,7 @@ import configparser
 import os
 from pathlib import Path
 
+
 from .input.iinput import IInput
 from .output.ioutput import IOutput
 from .storage.istorage import IStorage
@@ -12,10 +13,12 @@ from .input.cli import CLIInput
 from .storage.json import JSONStorage
 from .storage.in_memory import InMemoryStorage
 from .output.cli import CLIOutput
+from .output.pyqt import PyQtInputOutput
 from .core.tasks import TaskManager
 
 
 config = configparser.ConfigParser()
+config.read(Path(os.path.dirname(os.path.realpath(__file__))) / "config.ini")
 
 
 class StorageType(Enum):
@@ -25,11 +28,21 @@ class StorageType(Enum):
 
 class InputType(Enum):
     cli = "cli"
+    pyqt = "pyqt"
 
 
 class OutputType(Enum):
     cli = "cli"
+    pyqt = "pyqt"
 
+pyqt_manager = None
+
+def get_pyqt_manager():
+    global pyqt_manager
+
+    if not pyqt_manager:
+        pyqt_manager = PyQtInputOutput()
+    return pyqt_manager
 
 get_output_type = lambda: config["DEFAULT"]["output-type"]
 
@@ -39,6 +52,8 @@ def _get_output_manager() -> IOutput | None:
     match output_type:
         case OutputType.cli.value:
             return CLIOutput()
+        case OutputType.pyqt.value:
+            return get_pyqt_manager()
 
 
 get_input_type = lambda: config["DEFAULT"]["input-type"]
@@ -49,7 +64,11 @@ def _get_input_manager() -> IInput | None:
     match input_type:
         case InputType.cli.value:
             return CLIInput()
+        case InputType.pyqt.value:
+            return get_pyqt_manager()
 
+output_manager = _get_output_manager()
+input_manager = _get_input_manager()
 
 get_storage_type = lambda: config["DEFAULT"]["storage-type"]
 
@@ -64,10 +83,6 @@ def _get_storage_manager() -> IStorage | None:
 
 
 async def main():
-    config.read(Path(os.path.dirname(os.path.realpath(__file__))) / "config.ini")
-
-    output_manager = _get_output_manager()
-    input_manager = _get_input_manager()
     storage_manager = _get_storage_manager()
 
     if not output_manager:
@@ -97,5 +112,13 @@ async def main():
     start_task = asyncio.create_task(input_manager.start())
     await start_task
 
-
-asyncio.run(main())
+if InputType.pyqt.value in [get_input_type(), get_output_type()]:
+    if not pyqt_manager:
+        raise Exception('pyqt_manager was not initialized.')
+    import qasync
+    with qasync.QEventLoop(pyqt_manager.application) as loop:
+        asyncio.set_event_loop(loop)
+        loop.create_task(main())
+        loop.run_forever()
+else:
+    asyncio.run(main())

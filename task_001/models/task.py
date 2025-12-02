@@ -6,15 +6,19 @@ class TaskNotFound(Exception):
     """Task index out of bound."""
 
 
-class TaskStatus(str, Enum):
+class TaskStatus(Enum):
     done = "done"
     in_progress = "in-progress"
     planned = "todo"
 
 
 @dataclass
-class Task:
+class BaseTask:
     description: str
-    status: TaskStatus
+    status: str
     createdAt: float
     updatedAt: float
+
+@dataclass
+class Task(BaseTask):
+    id: int

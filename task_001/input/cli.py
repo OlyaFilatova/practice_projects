@@ -19,14 +19,14 @@ class CLIInput(IInput):
     def __init__(self):
         self._setup_program()
 
-    def _parse_task_status(self, key: str | None) -> TaskStatus | None:
+    def _parse_task_status(self, key: str | None) -> str | None:
         if key == None:
             return None
 
         if key not in task_statuses:
             raise ValueError(self.__error_handler(f"Task status not found {key}"))
 
-        return task_statuses[key]
+        return key
 
     async def _parse_index(self, index: str) -> int | None:
         try:
@@ -92,7 +92,7 @@ class CLIInput(IInput):
             await handler_task
 
     def set_status_handler(
-        self, callback: Callable[[int, TaskStatus], CoroutineType[Any, Any, None]]
+        self, callback: Callable[[int, str], CoroutineType[Any, Any, None]]
     ) -> None:
         self.__status_handler = callback
 
@@ -101,11 +101,11 @@ class CLIInput(IInput):
         subparser.add_argument("index")
         subparser.set_defaults(
             func=lambda index, **kwargs: self._change_task_status(
-                index, TaskStatus.planned
+                index, TaskStatus.planned.value
             )
         )
 
-    async def _change_task_status(self, index: str, status: TaskStatus):
+    async def _change_task_status(self, index: str, status: str):
         parse_task = asyncio.create_task(self._parse_index(index))
         idx = await parse_task
 
@@ -120,7 +120,7 @@ class CLIInput(IInput):
         subparser.add_argument("index")
         subparser.set_defaults(
             func=lambda index, **kwargs: self._change_task_status(
-                index, TaskStatus.in_progress
+                index, TaskStatus.in_progress.value
             )
         )
 
@@ -129,7 +129,7 @@ class CLIInput(IInput):
         subparser.add_argument("index")
         subparser.set_defaults(
             func=lambda index, **kwargs: self._change_task_status(
-                index, TaskStatus.done
+                index, TaskStatus.done.value
             )
         )
 

@@ -1,8 +1,7 @@
 # Task manager
 
 ## Ideas for future versions
-- [ ] Add tests. Further continue through TDD.
-- [ ] Add UI adapters (PyQT, REST API, WebSockets, etc.)
+- [ ] Add UI adapters (REST API, WebSockets, etc.)
 - [ ] Add subtasks.
 - [ ] Add task priority.
 - [ ] Make categories of tasks using different files and subfolders.
@@ -16,7 +15,12 @@
     - [ ] SQLite
     - [ ] PostgreSQL
     - ...
+- [ ] Add tests.
 - [ ] Integrate LLM to add ability to request suggestions for the task execution.
+
+## Version 0.4.0
+- [x] Changed JSON structure to have ids based on counter.
+- [-] Add PyQT UI adapter
 
 ## Version 0.3.0
 - [x] Support asynchronous logic

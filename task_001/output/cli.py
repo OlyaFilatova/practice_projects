@@ -25,13 +25,13 @@ class CLIOutput(IOutput):
             )
         )
 
-    async def task_added_success(self, id: int):
+    async def task_added_success(self, id: int, task: Task):
         print(f"Task added successfully (ID: {id})")
 
-    async def task_updated_success(self, id: int):
+    async def task_updated_success(self, id: int, task: Task):
         print(f"Task updated successfully (ID: {id})")
 
-    async def task_status_updated_success(self, id: int):
+    async def task_status_updated_success(self, id: int, task: Task):
         print(f"Task status updated successfully (ID: {id})")
 
     async def task_deleted_success(self, id: int):

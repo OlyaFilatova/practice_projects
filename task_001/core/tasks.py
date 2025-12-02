@@ -5,7 +5,7 @@ from ..input.cli import CLIInput
 from ..input.iinput import IInput
 
 
-from ..models.task import TaskNotFound, TaskStatus, Task
+from ..models.task import BaseTask, TaskNotFound, TaskStatus, Task
 from ..output.cli import CLIOutput
 from ..output.ioutput import IOutput
 from ..storage.istorage import IStorage
@@ -34,7 +34,7 @@ class TaskManager:
         storage_task = asyncio.create_task(self.storage_manager.load())
         tasks = await storage_task
         tasks_list = [
-            task for task in enumerate(tasks) if not status or task[1].status == status
+            task for task in enumerate(tasks.values()) if not status or task[1].status == status
         ]
 
         output_task = asyncio.create_task(self.output_manager.tasks_list(tasks_list))
@@ -43,20 +43,20 @@ class TaskManager:
     async def create_task(self, description: str):
         storage_task = asyncio.create_task(
             self.storage_manager.add(
-                Task(
+                BaseTask(
                     description=description,
-                    status=TaskStatus.planned,
+                    status=TaskStatus.planned.value,
                     createdAt=time.time(),
                     updatedAt=time.time(),
                 )
             )
         )
-        idx, _ = await storage_task
+        idx, task = await storage_task
 
-        output_task = asyncio.create_task(self.output_manager.task_added_success(idx))
+        output_task = asyncio.create_task(self.output_manager.task_added_success(idx, task))
         await output_task
 
-    async def change_status(self, idx: int, status: TaskStatus) -> None:
+    async def change_status(self, idx: int, status: str) -> None:
         try:
             storage_task = asyncio.create_task(self.storage_manager.get_by_idx(idx))
             task = await storage_task
@@ -66,11 +66,6 @@ class TaskManager:
             )
             await output_task
         else:
-            output_task = asyncio.create_task(
-                self.output_manager.task_status_updated_success(idx)
-            )
-            await output_task
-
             task.status = status
             task.updatedAt = time.time()
 
@@ -78,6 +73,11 @@ class TaskManager:
                 self.storage_manager.update_by_idx(idx, task)
             )
             await storage_task
+
+            output_task = asyncio.create_task(
+                self.output_manager.task_status_updated_success(idx, task)
+            )
+            await output_task
 
     async def update_task(self, idx: int, description: str) -> None:
         try:
@@ -97,7 +97,7 @@ class TaskManager:
             )
             await storage_task
             output_task = asyncio.create_task(
-                self.output_manager.task_updated_success(idx)
+                self.output_manager.task_updated_success(idx, task)
             )
             await output_task
 
@@ -131,8 +131,8 @@ if __name__ == "__main__":
             task_manager.create_task("Second ever task"),
             task_manager.create_task("Thirs ever task"),
             task_manager.list_tasks(),
-            task_manager.change_status(0, TaskStatus.in_progress),
-            task_manager.change_status(2, TaskStatus.done),
+            task_manager.change_status(0, TaskStatus.in_progress.value),
+            task_manager.change_status(2, TaskStatus.done.value),
             task_manager.list_tasks(),
             task_manager.list_tasks(TaskStatus.planned),
             task_manager.list_tasks(TaskStatus.in_progress),
